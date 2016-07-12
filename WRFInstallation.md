@@ -11,25 +11,27 @@ Using this automated install  requires that you run buildAll.sh from the top lev
 
 This will begin installation of  WRF, WPS and the various dependencies required to run a real data simulation.
 
-## TESTS
+## Initial Testing
 
 There are a number of tests bundled with this installer. These tests are performed at various stages in the installation. Any results of these tests will be found in the test.log and make.log files that are produced upon completion of the install. ==It is important that these files are checked as failiure at any stage of this process may lead to an incomplete model that does not execute.== Furthermore the model may execute returning erroneous data that is not at first obvious to the user.
 
-###Inital Testing
 
-This is done by a file located at test/initialTest.sh the file containns the following code:
+This is done by a file located at `test/initialTest.sh` the file contains the following code:
 
 	tar -xf Fortran_C_tests.tar
 	
 	ifort TEST_1_fortran_only_fixed.f 
 	./a.out
+	
 	ifort TEST_2_fortran_only_free.f90 
 	./a.out
+	
 	icc TEST_3_c_only.c 
 	./a.out 
+	
 	icc -c -m64 TEST_4_fortran+c_c.c 
 	ifort -c -m64 TEST_4_fortran+c_f.f90 
-	ifort -m64  TEST_4_fortran+c_f.o TEST_4_fortran	+c_c.o
+	ifort -m64  TEST_4_fortran+c_f.o TEST_4_fortran+c_c.o
 	./a.out
 	
 	
@@ -61,7 +63,7 @@ The second set of tests check for the existence of 3 scripting languages.
 To run a WRF simulation there are number of libraries that need to be installed:
 
 1. NetCDF:
-This library is essential for WRF.
+This library is essential for WRF and is installed by a script located at build/netCDFInstall.sh 
 2. MPICH:
 This library is essential if you wish to build WRF in parallel.
 3. zlib:
@@ -71,16 +73,102 @@ A compression library neccessary for compiling WPS and used with GRIB2
 5. JasPer:
 A compression library neccessary for compiling WPS and used with GRIB2
 
+The last four libraries are installed by two scripts located at  `build/LIBRARIES/netCDFInstall.sh` and `build/LIBRARIES/mpichInstall.`The code within these two files is presented below:
+
+for netCDFInstall:
+
+	export DIR=/nobackup/issev003/copy/build/LIBRARIES
+	export CC=icc
+	export CXX=icpc
+	export FC=ifort
+	export F77=ifort
+	export FCFLAGS=-m64
+	export FFLAGS=-m64
+
+	cd LIBRARIES
+
+	tar xzf netcdf-4.1.3.tar.gz
+	cd netcdf-4.1.3
+	./configure --prefix=$DIR/netcdf --disable-dap --	disable-netcdf-4 --disable-shared
+	make
+	make install
+	make check >& netCDFMakeCheck.txt
+	export PATH=$DIR/netcdf/bin:$PATH
+	export NETCDF=$DIR/netcdf
+	
+	
+mpichInstall:
+
+	tar xzf mpich-3.0.4.tar.gz
+	cd mpich-3.0.4
+
+	./configure --prefix=$DIR/mpich
+
+	touch libraryBuild.txt
+
+	echo "##############    make details for MPICH    ##############" >> libraryBuild.txt
+ 
+	make >>& libraryBuild.txt
+	make install >>& libraryBuild.txt
+	make check >>& libraryBuild.txt
+
+	export PATH $DIR/mpich/bin:$PATH
+	cd ..
+
+	export LDFLAGS=-L$DIR/grib2/lib
+	export CPPFLAGS=-I$DIR/mpich/bin:$PATH
+
+	tar xzvf zlib-1.2.7.tar.gz
+	cd zlib-1.2.7
+	./configure --prefix=$DIR/grib2
+
+	echo "##############    make details for zlib    ##############" >> libraryBuild.txt
+
+	make >> libraryBuild.txt
+	make install >> libraryBuild.txt
+	make check >> libraryBUild.txt
+
+	cd ..
+
+
+	tar xzvf libpng-1.2.50.tar.gz     #or just .tar if no .gz 	present
+	cd libpng-1.2.50
+	./configure --prefix=$DIR/grib2
+
+	echo "##############    make details for libpng    	##############" >> libraryBuild.txt
+
+	make >> libraryBuild.txt
+	make install >> libraryBuild.txt
+
+	cd ..
+
+	tar xzvf jasper-1.900.1.tar.gz     #or just .tar if no .gz 	present
+	cd jasper-1.900.1
+
+	./configure --prefix=$DIR/grib2
+
+
+	echo "##############    make details for jasper    	##############" >> libraryBuild.txt
+	make >> libraryBuild.txt 
+	make install >> libraryBuild.txt
+
+	cd ..
+
+
+
 These libraries are included with the installation files and are all installed for you by this installer.
+
 
  
 ###Library Testing
 
 
-These tests are used to check the installation of the libraries that are required by WRFV3 and WPS.
+These tests are used to check the installation of the libraries that are required by WRFV3 and WPS and are carried out by a file located at `test/testLibraries.sh`
 
 1. Fortran + C + NetCDF
 2. Fortran + c + NetCDF + MPI
+
+These tests ensure that NetCDF and MPI are functioning correctly with both C and Fortran as required by the remainder of the install. 
 
 
 ##Building WRFV3
@@ -195,6 +283,19 @@ These cases all require the static data files that are include in the installati
 
 Most researchers that are using HPC are interested in the em_real case. The option for which case you want to install must be given in the compilation options.
 
+The WRF install is done by `build/compileWRF.sh` and contains:
+
+	export JASPERLIB=$DIR/grib2/lib
+	export JASPERINC=$DIR/grib2/include
+	tar -xf WRFV3.7.TAR
+	cd WRFV3
+	./configure
+	./compile em_real >& log.compile
+	
+	##This line is a test for the existence of the .exe files
+	
+	ls -ls main/*.exe
+
 ### WRF Test
 
 if an em_real case was compiled there should be four executables (files with extension .exe) created.
@@ -222,6 +323,24 @@ WRFV3/test/em_real
 
 WPS is required to run the em_real case of the WRF model. In order for this to be successfull the WRF model must be properly built before attempting to build WPS.
 
+The compilation of WPS is done by `build/wpsInstall.sh`. 
+
+This file contains:
+	
+	tar -xf WPSV3.7.TAR
+
+	cd WPS
+
+	./clean
+
+	export JASPERLIB=$DIR/grib2/lib
+	export JASPERINC=$DIR/grib2/include
+
+	./configure
+
+	./compile >& log.compile
+
+	ls -ls *.exe
 #####Compilation Options
 
 As with WRF there are a number of compilation for WPS. The compiler  type, version number and a choice of compilation paradigms are provided as before.==Again it is essential that the compiler type and version is the same as the compiler that was used to build WRF and the supporting libraries.== However the compilation paradigm (ser/spar/dpar/dmpar) should be set to serial regardless of the option that was chosen to build WRF, unless you plan to run simulations with exceptionally large domains.
@@ -236,7 +355,7 @@ ungrib.exe
 
 metgrid.exe
 
-Again a test is performed to confirm the existence of these files and the results are appended to the test.log file. When checking these results it is important to check that the files generated are of non zero size.
+Again a test is performed to confirm the existence of these files and the results are appended to the test.log file. ==When checking these results it is important to check that the files generated are of non zero size.==
 
 ##Static Data
 
@@ -255,17 +374,17 @@ The national centre for environmental prediction  (NCEP) run the Global Forecast
 
 A single data file needs to be acquired for each requested time period. For example, if we would like hours 0, 6, and 12 of a forecast that is initialized 2014 Jan 31 at 0000 UTC, we need the following times:
 
-2014013100 – 0 h
-2014013106 – 6 h
-2014013112 – 12 h
+	2014013100 – 0 h
+	2014013106 – 6 h
+	2014013112 – 12 h
 
 These translate to the following file names to access:
 
-gfs.2014013100/gfs.t00z.pgrb2.0p50.f000
+	gfs.2014013100/gfs.t00z.pgrb2.0p50.f000
 
-gfs.2014013100/gfs.t00z.pgrb2.0p50.f006
+	gfs.2014013100/gfs.t00z.pgrb2.0p50.f006
 
-gfs.2014013100/gfs.t00z.pgrb2.0p50.f012
+	gfs.2014013100/gfs.t00z.pgrb2.0p50.f012
 
 Note that the initialization data and time (gfs.2014013100) remains the same, and that the forecast cycle remains the same (t00z). What is incremented is the forecast hour (f00, f06, f12).
 
@@ -275,11 +394,11 @@ A simple set of interactive commands to grab these files from the NCEP servers i
 To use up-to-date real-time data, you will need to adjust the commands to reflect current date and time information:
 
 
-curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_00h ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f000
+	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_00h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f000
 
-curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_06h ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f006
+	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_06h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f006
 
-curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_12h ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f012
+	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_12h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f012
 
 Typically these commands return a complete file within a few seconds. The files returned from these commands (GFS\_00h, GFS\_06h, GFS_12h) are Grib Edition 2 files, able to be directly used by the ungrib program.
 
@@ -287,20 +406,3 @@ You need to fill in the anonymous login information (which is not private, so th
 
 
 ##Run WRF an WPS
-
-
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
