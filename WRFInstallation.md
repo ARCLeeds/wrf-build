@@ -4,40 +4,49 @@ To install WRF in the nobackup area of the ARC2 system it is important that all 
 
 This will help you to de-bug the installation and is reccomended reading for anyone who wishes to compile and run instances of WRF on the ARC2 system.
 
+### Before Installing
+
+Before running this installer it is reccomended that you read this documentation in full so that you appreciate what the installer is doing. It is also important that you retrieve the data that you would like to use for your simulation. The installer is packaged with example data as provided by Julieanne and this data is sufficient to run the practice forecast and hurricane Katrina simulation.
+
+If further experimentation is required there are instructions on how to retrieve up to date real time data and further static data.If you plan to use this data with this installation script a number of changes will need to be made to allow this. These changes are documented in the relevant sections and ==must be performed before installation commences==.
 
 ###  Running the automated  installation
 
-Using this automated install  requires that you run buildAll.sh from the top level of the WRF_INSTALL directory.
+Using this automated installer requires that you run intelFull.sh from the top level of the wrf_installer directory.
 
-This will begin installation of  WRF, WPS and the various dependencies required to run a real data simulation.
+to do this type `source intelFull.sh /nobackup/youruserdirectory`
+
+This will begin installation of  WRF, WPS and the various dependencies required to run a real data simulation. This command will install wrf in a folder labeled wrf in your user directory. If you do not provide a command line argument an error message will appear and the installer will log you out of the arc system to prevent the rest of the script running.
 
 ## Initial Testing
 
-There are a number of tests bundled with this installer. These tests are performed at various stages in the installation. Any results of these tests will be found in the test.log and make.log files that are produced upon completion of the install. ==It is important that these files are checked as failiure at any stage of this process may lead to an incomplete model that does not execute.== Furthermore the model may execute returning erroneous data that is not at first obvious to the user.
+There are a number of tests bundled with this installer. These tests are performed at various stages in the installation. Any results of these tests will be found in the test.log and make.log files that are produced upon completion of the install.These files are located in the top level of the wrf directory. ==It is important that these files are checked as failiure at any stage of this process may lead to an incomplete model that does not execute.== Furthermore the model may execute returning erroneous data that is not at first obvious to the user.
 
 
-This is done by a file located at `test/initialTest.sh` the file contains the following code:
+The first set of tests contain the following code:
 
 	tar -xf Fortran_C_tests.tar
+	ifort TEST_1_fortran_only_fixed.f
+	./a.out >& ../test.log
 	
-	ifort TEST_1_fortran_only_fixed.f 
-	./a.out
 	
-	ifort TEST_2_fortran_only_free.f90 
-	./a.out
+	ifort TEST_2_fortran_only_free.f90
+	./a.out >> ../test.log
 	
-	icc TEST_3_c_only.c 
-	./a.out 
 	
-	icc -c -m64 TEST_4_fortran+c_c.c 
-	ifort -c -m64 TEST_4_fortran+c_f.f90 
+	icpc TEST_3_c_only.c
+	./a.out >> ../test.log
+	
+	
+	icc -c -m64 TEST_4_fortran+c_c.c
+	ifort -c -m64 TEST_4_fortran+c_f.f90
 	ifort -m64  TEST_4_fortran+c_f.o TEST_4_fortran+c_c.o
-	./a.out
+	./a.out >> ../test.log
 	
 	
-	./TEST_csh.csh
-	./TEST_perl.pl
-	./TEST_sh.sh
+	./TEST_csh.csh >> ../test.log
+	./TEST_perl.pl >> ../test.log
+	./TEST_sh.sh >> ../test.log
 	
 
 ####C, C++, Fortran
@@ -73,97 +82,120 @@ A compression library neccessary for compiling WPS and used with GRIB2
 5. JasPer:
 A compression library neccessary for compiling WPS and used with GRIB2
 
-The last four libraries are installed by two scripts located at  `build/LIBRARIES/netCDFInstall.sh` and `build/LIBRARIES/mpichInstall.`The code within these two files is presented below:
+The code to install these dependencies is presented below:
 
-for netCDFInstall:
+	#These lines add these environment varables to your .bashrc and .bash_profile files. 
 
-	export DIR=/nobackup/issev003/copy/build/LIBRARIES
-	export CC=icc
-	export CXX=icpc
-	export FC=ifort
-	export F77=ifort
-	export FCFLAGS=-m64
-	export FFLAGS=-m64
-
+	echo 'export DIR=$path/wrf/build/LIBRARIES' >> ~/.bashrc
+	echo 'export CC=icc' >> ~/.bashrc
+	echo 'export CXX=icpc' >> ~/.bashrc
+	echo 'export FC=ifort' >> ~/.bashrc
+	echo 'export F77=ifort' >> ~/.bashrc
+	echo 'export FCFLAGS=-m64' >> ~/.bashrc
+	echo 'export FFLAGS=-m64' >> ~/.bashrc
+	
+	echo 'export DIR=$path/wrf/build/LIBRARIES' >> ~/.bash_profile
+	echo 'export CC=icc' >> ~/.bash_profile
+	echo 'export CXX=icpc' >> ~/.bash_profile
+	echo 'export FC=ifort' >> ~/.bash_profile
+	echo 'export F77=ifort' >> ~/.bash_profile
+	echo 'export FCFLAGS=-m64' >> ~/.bash_profile
+	echo 'export FFLAGS=-m64' >> ~/.bash_profile
+	
+	# Reload the .bashrc and .bash_profile to reflect recent changes
+	
+	source ~/.bashrc
+	source ~/.bash_profile
+	
 	cd LIBRARIES
-
+	
 	tar xzf netcdf-4.1.3.tar.gz
 	cd netcdf-4.1.3
-	./configure --prefix=$DIR/netcdf --disable-dap --	disable-netcdf-4 --disable-shared
-	make
-	make install
-	make check >& netCDFMakeCheck.txt
-	export PATH=$DIR/netcdf/bin:$PATH
-	export NETCDF=$DIR/netcdf
+	
+	./configure --prefix=$DIR/netcdf --disable-dap --disable-netcdf-4 --disable-shared
 	
 	
-mpichInstall:
-
-	tar xzf mpich-3.0.4.tar.gz
-	cd mpich-3.0.4
-
-	./configure --prefix=$DIR/mpich
-
-	touch libraryBuild.txt
-
-	echo "##############    make details for MPICH    ##############" >> libraryBuild.txt
- 
-	make >>& libraryBuild.txt
-	make install >>& libraryBuild.txt
-	make check >>& libraryBuild.txt
-
-	export PATH $DIR/mpich/bin:$PATH
+	make >& ../../../make.log
+	make install >> ../../../make.log
+	make check >> ../../../make.log
+	
+	
+	echo 'export PATH=$DIR/netcdf/bin:$PATH' >> ~/.bashrc
+	echo 'export NETCDF=$DIR/netcdf' >> ~/.bashrc
+	echo 'export PATH=$DIR/netcdf/bin:$PATH' >> ~/.bash_profile
+	echo 'export NETCDF=$DIR/netcdf' >> ~/.bash_profile
+	
+	source ~/.bashrc
+	source ~/.bash_profile
+	
 	cd ..
-
-	export LDFLAGS=-L$DIR/grib2/lib
-	export CPPFLAGS=-I$DIR/mpich/bin:$PATH
-
+	
+	tar xzf mpich-3.0.4.tar.gz
+	
+	cd mpich-3.0.4
+	
+	./configure --prefix=$DIR/mpich
+	
+	make >> ../../../make.log
+	make install >> ../../../make.log
+	
+	echo 'export PATH=$DIR/mpich/bin:$PATH' >> ~/.bashrc
+	echo 'export PATH=$DIR/mpich/bin:$PATH' >> ~/.bash_profile
+	cd ..
+	
+	echo 'export LDFLAGS=-L$DIR/grib2/lib' >> ~/.bashrc
+	echo 'export CPPFLAGS=-I$DIR/mpich/bin:$PATH' >> ~/.bashrc
+	
+	echo 'export LDFLAGS=-L$DIR/grib2/lib' >> ~/.bash_profile
+	echo 'export CPPFLAGS=-I$DIR/mpich/bin:$PATH' >> ~/.bash_profile
+	
+	
+	source ~/.bashrc
+	source ~/.bash_profile
+	
 	tar xzvf zlib-1.2.7.tar.gz
 	cd zlib-1.2.7
 	./configure --prefix=$DIR/grib2
-
-	echo "##############    make details for zlib    ##############" >> libraryBuild.txt
-
-	make >> libraryBuild.txt
-	make install >> libraryBuild.txt
-	make check >> libraryBUild.txt
-
+	
+	
+	make >> ../../../make.log
+	make install >> ../../../make.log
+	
 	cd ..
-
-
-	tar xzvf libpng-1.2.50.tar.gz     #or just .tar if no .gz 	present
+	
+	
+	tar xzvf libpng-1.2.50.tar.gz
 	cd libpng-1.2.50
 	./configure --prefix=$DIR/grib2
-
-	echo "##############    make details for libpng    	##############" >> libraryBuild.txt
-
-	make >> libraryBuild.txt
-	make install >> libraryBuild.txt
-
+	
+	
+	make >> ../../../make.log
+	make install >> ../../../make.log
+	
 	cd ..
-
-	tar xzvf jasper-1.900.1.tar.gz     #or just .tar if no .gz 	present
+	
+	tar xzvf jasper-1.900.1.tar.gz
 	cd jasper-1.900.1
-
+	
 	./configure --prefix=$DIR/grib2
-
-
-	echo "##############    make details for jasper    	##############" >> libraryBuild.txt
-	make >> libraryBuild.txt 
-	make install >> libraryBuild.txt
-
-	cd ..
-
-
+	
+	make >> ../../../make.log
+	make install >> ../../../make.log
+	
+	echo 'export JASPERLIB=$DIR/grib2/lib' >> ~/.bashrc
+	echo 'export JASPERINC=$DIR/grib2/include' >> ~/.bashrc
+	echo 'export JASPERLIB=$DIR/grib2/lib' >> ~/.bash_profile
+	echo 'export JASPERINC=$DIR/grib2/include' >> ~/.bash_profile
+	
+	source ~/.bashrc
+	source ~/.bash_profile
 
 These libraries are included with the installation files and are all installed for you by this installer.
 
-
- 
 ###Library Testing
 
 
-These tests are used to check the installation of the libraries that are required by WRFV3 and WPS and are carried out by a file located at `test/testLibraries.sh`
+These tests are used to check the installation of the libraries that are required by WRFV3 and WPS:
 
 1. Fortran + C + NetCDF
 2. Fortran + c + NetCDF + MPI
@@ -176,6 +208,26 @@ These tests ensure that NetCDF and MPI are functioning correctly with both C and
 The actual WRFV3 build requires that a compiler is selected from the list of available compilers. It is essential that this compiler is the same compiler that was used to compile and build the Libraries.
 
 The options that are set here include:
+
+	tar -xf Fortran_C_NETCDF_MPI_tests.tar
+	
+	cp ${NETCDF}/include/netcdf.inc .
+	
+	ifort -c 01_fortran+c+netcdf_f.f
+	icc -c 01_fortran+c+netcdf_c.c
+	ifort  01_fortran+c+netcdf_f.o 01_fortran+c+netcdf_c.o -L${NETCDF}/lib -lnetcdff -lnetcdf
+	
+	
+	./a.out >> ../test.log
+	
+	cp ${NETCDF}/include/netcdf.inc .
+	
+	
+	mpif90 -c 02_fortran+c+netcdf+mpi_f.f
+	mpicc -c 02_fortran+c+netcdf+mpi_c.c
+	mpif90 02_fortran+c+netcdf+mpi_f.o 02_fortran+c+netcdf+mpi_c.o -L${NETCDF}/lib -lnetcdff -lnetcdf
+	
+	mpirun ./a.out >> ../test.log
 
 ####Compiler
 
@@ -204,7 +256,7 @@ versions:
 
 1. 13.6
 
-Each of these compilers are available in the verion numbers displayed above. This may be selected at the start of installation and and must be consistent throughout installation.
+Each of these compilers are available in the verion numbers displayed above. This may be selected at the start of installation and and must be consistent throughout installation. Although users are offered a choice it is ==highly reccomended that you choose the intel compiler with the {dmpar} option== for compilation on arc2. ==This script in particular is only suitable for the intel compilers.== If you would like to try another compiler one should either do a manual install or re create this script for a different compiler
 
 ####Compilation Type
 
@@ -220,7 +272,7 @@ It is possible to compile WRF and WPS in a number of different ways speific to t
 {DMP} This is the memory model that is used by programs written in MPICH.
 
 4. #####Shared and distibuted memory compilation. 
-{SDMP} This option supports use in shared and distributed memory settings. 
+{SDMP} This option supports use in shared and distributed memory settings.(MPICH between nodes and OpenMP where memory can be shared)
 
 Once again, it is important that the compiler used to compile WRF and WPS is the same compiler that was used to compile the library components of this installation.
 
@@ -283,18 +335,17 @@ These cases all require the static data files that are include in the installati
 
 Most researchers that are using HPC are interested in the em_real case. The option for which case you want to install must be given in the compilation options.
 
-The WRF install is done by `build/compileWRF.sh` and contains:
+The WRF install is done by the following code:
 
-	export JASPERLIB=$DIR/grib2/lib
-	export JASPERINC=$DIR/grib2/include
-	tar -xf WRFV3.7.TAR
-	cd WRFV3
 	./configure
-	./compile em_real >& log.compile
+	./compile em_real >& log.wrf
 	
-	##This line is a test for the existence of the .exe files
+	ls -ls main/*.exe >> log.wrf
 	
-	ls -ls main/*.exe
+	cd ..
+
+Again log files are created in the top level of the wrf directory created by the installer.
+
 
 ### WRF Test
 
@@ -310,7 +361,7 @@ If an idealized case is created ther should be only two executables created.
 1. wrf.exe
 2. ideal.exe
 
-A command is used to check for the existence of these files and the results of this command are stored in the test.log file.There should also be two symbolic links created for these executables allowing the user to run from either
+A command is used to check for the existence of these files and the results of this command are stored in the wrf.log file.There should also be two symbolic links created for these executables allowing the user to run from either
 
 WRFV3/run
 
@@ -318,32 +369,46 @@ or
 
 WRFV3/test/em_real
 
+If you compile WRF and you get all of the executeables that are expected but WRF does not run the simulation it is helpful to check that the .exe files are of non-zero size and that the actual .exe files have been created not just the symbolic links.
+
 
 ##Building WPS
 
-WPS is required to run the em_real case of the WRF model. In order for this to be successfull the WRF model must be properly built before attempting to build WPS.
-
-The compilation of WPS is done by `build/wpsInstall.sh`. 
-
-This file contains:
+WPS is required to run the em_real case of the WRF model. In order for this to be successfull the WRF model must be properly built before attempting to build WPS.The following code configures and compiles WPS.
 	
-	tar -xf WPSV3.7.TAR
-
-	cd WPS
-
-	./clean
-
+	export DIR=$path/wrf/build/LIBRARIES
+	export CC=icc
+	export CXX=icpc
+	export FC=ifort
+	export FCFLAGS=-m64
+	export F77=ifort
+	export FFLAGS=-m64
+	export PATH=$DIR/netcdf/bin:$PATH
+	export NETCDF=$DIR/netcdf
 	export JASPERLIB=$DIR/grib2/lib
 	export JASPERINC=$DIR/grib2/include
-
+	
 	./configure
-
-	./compile >& log.compile
-
-	ls -ls *.exe
+	
+	export DIR=$path/wrf/build/LIBRARIES
+	export CC=icc
+	export CXX=icpc
+	export FC=ifort
+	export FCFLAGS=-m64
+	export F77=ifort
+	export FFLAGS=-m64
+	export PATH=$DIR/netcdf/bin:$PATH
+	export NETCDF=$DIR/netcdf
+	export JASPERLIB=$DIR/grib2/lib
+	export JASPERINC=$DIR/grib2/include
+	
+	./compile wps >& ../../log.wps
+	
+	ls -ls *.exe >> ../../log.wps
+	
 #####Compilation Options
 
-As with WRF there are a number of compilation for WPS. The compiler  type, version number and a choice of compilation paradigms are provided as before.==Again it is essential that the compiler type and version is the same as the compiler that was used to build WRF and the supporting libraries.== However the compilation paradigm (ser/spar/dpar/dmpar) should be set to serial regardless of the option that was chosen to build WRF, unless you plan to run simulations with exceptionally large domains.
+As with WRF there are a number of compilation options for WPS. The compiler  type, version number and a choice of compilation paradigms are provided as before.==Again it is essential that the compiler type and version is the same as the compiler that was used to build WRF and the supporting libraries.== 
 
 A further option is given at this stage which is NO_Grib2 or  Grib2. It is advised that all users choose the grib2 option unless it is already known that the data being used is not to be used as Grib2 format.
 
@@ -360,14 +425,20 @@ Again a test is performed to confirm the existence of these files and the result
 ##Static Data
 
 
-The WRF weather modelling system requires a number of data files. These data are all available via the WRF website however we have downloaded and bundled all of the data in with this installer so everything that is available is included in this package. (July 2016) If there are further data made available you should be able to obtain it from this link.
+The WRF weather modelling system requires a number of data files.
 
-The data packaged with this installer expands to over 10GB of data therefore make sure there is enough room on your device before beginning an installation.==If you are installing on the ARC system please first move to /nobackup/username before atttempting to build and install the program as there will not be sufficient storage available in your HOME directory.==
+For the purpose of the practice forecast that is to be performed by Julieannes students all of the static and real time data is include in with this installer.However the real time data is obviously not current.
+
+The full data set is a vailable at the WRF website however we have downloaded and packaged all of the data and a copy will be made available to our users.
+
+The full data set expands to over 100GB of data therefore make sure there is enough room on your device before beginning an installation.==If you are installing on the ARC system please first move to /nobackup/username before atttempting to build and install the program as there will not be sufficient storage available in your HOME directory.==
 
 
 ##Real-time Data
 
-For em_real cases to run  real-time data is required. This data provides initial conditions and lateral boundary conditions and usually is provided in the form of a grib2 file. provided by a previously run external model or or anlysis.For a semi operational set up the meterological data is usually sourced from a global model , which requires locating the WRF model's domains anywghere on th e globe
+If one would like a more up to date real time data set to run the wrf model against then they can be retrieved from the sources given below. 
+
+For em_real cases to run real-time data is required. This data provides initial conditions and lateral boundary conditions and usually is provided in the form of a grib2 file and provided by a previously run external model or anlysis. For a semi operational set up the meterological data is usually sourced from a global model, which requires locating the WRF model's domains anywghere on the globe.
 
 
 The national centre for environmental prediction  (NCEP) run the Global Forecast System (GFS) model four times daily (hence data is available for 00:00,06:00,12:00,18:00)This is a global, isobaric, 0.5 degree latitude/longitude, forecast data set that is freely available and is usually accessible  + 4h after the initiallization time period.
@@ -394,15 +465,97 @@ A simple set of interactive commands to grab these files from the NCEP servers i
 To use up-to-date real-time data, you will need to adjust the commands to reflect current date and time information:
 
 
-	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_00h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f000
+	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER_ID@INSTITUTION -o GFS_00h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f000
 
-	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_06h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f006
+	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER_ID@INSTITUTION -o GFS_06h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f006
 
-	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER\_ID@INSTITUTION -o GFS_12h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f012
+	curl -s --disable-epsv --connect-timeout 30 -m 60 -u anonymous:USER_ID@INSTITUTION -o GFS_12h 	ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.2014013100/gfs.t00z.pgrb2.0p50.f012
 
 Typically these commands return a complete file within a few seconds. The files returned from these commands (GFS\_00h, GFS\_06h, GFS_12h) are Grib Edition 2 files, able to be directly used by the ungrib program.
 
-You need to fill in the anonymous login information (which is not private, so there are no security concerns about leaving these scripts around). You will probably end up writing a short script to automatically increment the initialization time.  
+You need to fill in the anonymous login information (which is not private, so there are no security concerns about leaving these scripts around). You will probably end up writing a short script to automatically increment the initialization time.
+
+To use this real time data instead of the data bundled in the installer you need to put them in the directory GRB and update the input scripts to reflect your new data set.
 
 
 ##Run WRF an WPS
+
+The final part of the script takes care of some configuration in preperation for finally runnning WRF.
+
+
+	cd ../data
+
+	cp namelist.input ../WRFV3/test/em_real/namelist.input
+	cp namelist.output ../WRFV3/test/em_real/namelist.output
+	cp namelist.wps ../WPS/namelist.wps
+	
+	cd ../wps
+	
+	./geogrid.exe >& ../../log.geogrid
+	
+	./link_grib.csh ../GFS/
+	
+	ln -sf ungrib/Variable_Tables/Vtable.GFS Vtable
+	
+	./ungrib.exe >& ../../log.ungrib
+	
+	
+	./metgrid.exe >& ../../log.metgrid
+	
+	cd ../WRFV3/test/em_real
+	
+	ln -sf ../../../WPS/met_em* .
+	
+	
+
+You are now ready to run:
+
+	mpirun -np 1 ./real.exe
+	
+Check the end of your "rsl" files to make sure the run was successful:
+
+	tail rsl.error.0000
+	
+If you see a "SUCCESS" in there, and you see a wrfbdy\_d01 file, and wrfinput_d0* files for each of your domains, then the run was successful.
+
+To run WRFV3:
+
+	nano run_wrf.sh
+	
+
+Now edit the line you@leeds.ac.uk so that it contains your email address.Once edited press ctrl + x to save and exit. Then do,
+
+	qsub run_wrf.sh
+
+
+This job submission script was created to run WRF on a single node using all of the available resourcess on that node. WRF only actually uses half of the ram provided by this configuration however this ram can not be used by other nodes since you have exclusive access to it so you may as well reserve it all.
+
+	#!/bin/bash
+	
+	# Run the code from the current working directory and with the current module environment
+	#$ -V -cwd
+	
+	# Specify a runtime- 12 hours in this case
+	#$ -l h_rt=12:00:00
+	
+	# Request a full node (16 cores and 32GB on ARC2)
+	#$ -l nodes=1 
+	
+	
+	#$ -m be
+	#$ -M you@leeds.ac.uk
+	
+	# Concatenate output and error files
+	#$ -j y
+	#$ -o wrftest5.out
+	
+	# Set The MPICH Abort Environment Variable
+	
+	export MPICH_ABORT_ON_ERROR=1
+	ulimit -c unlimited
+
+	# Run WRF
+
+	mpirun wrf.exe
+	
+This run should complete within one hour for the practice forecast if it does not there may be a problem with the installation. This does not mean that the run will not complete as it is possible that this same run can take upto 14 hours when compiled incorrectly. If you would like further assistance with this please do not hesitate to contact the ARC team.
