@@ -1,0 +1,40 @@
+&share
+ wrf_core = 'ARW',
+ max_dom = 1,
+ start_date = '2014-12-02_12:00:00',
+ end_date = '2014-12-04_12:00:00',
+ interval_seconds = 21600,
+ io_form_geogrid = 2,
+/
+
+&geogrid
+ parent_id         = 1,
+ parent_grid_ratio = 1,
+ i_parent_start    = 1,
+ j_parent_start    = 1,
+ e_we          = 150,
+ e_sn          = 150,
+ geog_data_res = '30s',
+ dx = 28500,
+ dy = 28500,
+ map_proj =  'mercator',
+ ref_lat   = 48.0,
+ ref_lon   = -6.7,
+ truelat1  = 48.0,
+ truelat2  = 48.0,
+ stand_lon = -6.7,
+ ref_x = 75.0,
+ ref_y = 55.0,
+ geog_data_path = '/nobackup/earwrf01/geography'
+/
+
+&ungrib
+ out_format = 'WPS',
+ prefix = 'FILE',
+/
+
+&metgrid
+ fg_name = 'FILE',
+ io_form_metgrid = 2,
+/
+
